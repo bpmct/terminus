@@ -2,9 +2,7 @@ name: "terminus-development"
 
 services:
   init-certificates:
-    build:
-      context: .
-      target: development
+    image: terminus-dev:latest
     user: root
     environment:
       CERTIFICATE_URLS: ${CERTIFICATE_URLS:-}
@@ -16,9 +14,7 @@ services:
 
   web:
     init: true
-    build:
-      context: .
-      target: development
+    image: terminus-dev:latest
     environment:
       HANAMI_PORT: ${HANAMI_PORT}
       API_URI: ${API_URI}
@@ -55,9 +51,7 @@ services:
 
   worker:
     init: true
-    build:
-      context: .
-      target: development
+    image: terminus-dev:latest
     environment:
       HANAMI_PORT: ${HANAMI_PORT}
       API_URI: ${API_URI}
