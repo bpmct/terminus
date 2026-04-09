@@ -34,7 +34,7 @@ gem "nori", "~> 2.7"
 gem "petail", "~> 1.0"
 gem "pg", "~> 1.6", force_ruby_platform: true
 gem "pipeable", "~> 2.0"
-gem "puma", "~> 7.0"
+gem "puma", "~> 8.0"
 gem "rack-attack", "~> 6.7"
 gem "refinements", "~> 14.0"
 gem "rodauth", "~> 2.41"
