@@ -71,7 +71,11 @@ STEPS
 
 COPY . .
 
-RUN bundle exec hanami assets compile
+RUN DATABASE_URL=postgres://dummy:dummy@localhost/dummy \
+    KEYVALUE_URL=redis://localhost:6379/0 \
+    API_URI=http://localhost:2300 \
+    APP_SECRET=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+    bundle exec hanami assets compile
 
 FROM build AS development
 
