@@ -71,6 +71,8 @@ STEPS
 
 COPY . .
 
+RUN bundle exec hanami assets compile
+
 FROM build AS development
 
 ENV RACK_ENV=development
