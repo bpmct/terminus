@@ -52,7 +52,8 @@ module Authentication
       end
 
       # Feature (automatic): login_password_requirements_base
-      require_password_confirmation? false
+      require_login_confirmation? false
+      require_password_confirmation? true
 
       # Feature: active_sessions
       active_sessions_account_id_column :user_id
@@ -72,7 +73,7 @@ module Authentication
       change_password_button "Save"
 
       # Feature: create_account
-      create_account_button "Create"
+      create_account_button "Create Account"
       create_account_link_text "Register."
       create_account_route "register"
       create_account_view { view "register", nil }

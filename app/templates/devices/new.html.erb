@@ -12,6 +12,8 @@
     <div class="bit-card device">
       <h1 class="label">New Device</h1>
 
+      <p class="hint">Enter your device's MAC address and API key from the TRMNL firmware setup screen.</p>
+
       <%= form_for :device, routes.path(:devices), class: "bit-form" do |form| %>
         <%= render "devices/shared/fields",
                    form:,

@@ -6,7 +6,7 @@
 
   <div class="form-group mb-3">
     <label for="name" class="form-label">Name</label>
-    <input required="required" type="text" class="form-control" name="name" id="name">
+    <input required="required" type="text" class="form-control" name="name" id="name" autofocus placeholder="Your name">
   </div>
 
   <%== rodauth.render "login-field" %>
@@ -17,3 +17,5 @@
 
   <%== rodauth.button rodauth.create_account_button %>
 </form>
+
+<%= link_to "← Back to Login", "/login" %>

@@ -8,6 +8,8 @@
   <%== rodauth.skip_login_field_on_login? ? rodauth.render("login-display") : rodauth.render("login-field") %>
   <%== rodauth.render("password-field") unless rodauth.skip_password_field_on_login? %>
   <%== rodauth.button rodauth.login_button %>
+  <script>document.getElementById('login').focus()</script>
 </form>
 
 <%= link_to "Register", "/register" %>
+<p class="hint">To reset your password, contact your administrator.</p>

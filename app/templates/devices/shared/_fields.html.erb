@@ -27,7 +27,8 @@
                         id: :device_label,
                         value: field_for(:label, fields, device),
                         class: :value,
-                        autocomplete: :off %>
+                        autocomplete: :off,
+                        placeholder: "e.g. My Bedroom Display" %>
   <% end %>
 
   <%= scope(:form_field, key: :friendly_id, errors:).render do %>
@@ -55,6 +56,7 @@
                           value: field_for(:mac_address, fields, device),
                           class: "value value-cap",
                           autocomplete: :off,
+                          placeholder: "AA:BB:CC:DD:EE:FF",
                           "x-bind:type" => "show ? 'text' : 'password'"%>
 
       <%= render "shared/visibility_button" %>
@@ -90,6 +92,7 @@
                           value: field_for(:refresh_rate, fields, device),
                           class: :value,
                           min: 20 %>
+    <small class="hint">seconds (e.g. 900 = 15 min)</small>
   <% end %>
 
   <%= scope(:form_field, key: :image_timeout, errors:).render do %>
@@ -103,6 +106,7 @@
                           value: field_for(:image_timeout, fields, device),
                           class: :value,
                           min: 0 %>
+    <small class="hint">seconds (0 = disabled)</small>
   <% end %>
 
   <%= scope(:form_field, key: :firmware_update, errors:).render do %>
