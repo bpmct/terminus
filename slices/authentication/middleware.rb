@@ -52,7 +52,8 @@ module Authentication
       end
 
       # Feature (automatic): login_password_requirements_base
-      require_password_confirmation? false
+      require_login_confirmation? false
+      require_password_confirmation? true
 
       # Feature: active_sessions
       active_sessions_account_id_column :user_id
