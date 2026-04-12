@@ -1,0 +1,254 @@
+:toc: macro
+:toclevels: 5
+:figure-caption!:
+
+:railway_link: link:https://railway.com[Railway]
+:railway_cli_link: link:https://docs.railway.com/guides/cli[Railway CLI]
+:railway_volumes_link: link:https://docs.railway.com/guides/volumes[Railway Volumes]
+:railway_private_networking_link: link:https://docs.railway.com/guides/private-networking[Private Networking]
+:railway_cron_link: link:https://docs.railway.com/guides/cron-jobs[Cron Jobs]
+:postgres_link: link:https://www.postgresql.org[PostgreSQL]
+:redis_link: link:https://redis.io[Redis]
+
+= Railway
+
+This guide covers deploying Terminus to {railway_link}. The deployment uses five services: `web`, `worker`, `migrate`, `assets`, plus managed {postgres_link} and {redis_link} add-ons.
+
+toc::[]
+
+== Architecture
+
+[cols="1,2,3"]
+|===
+|Service |Start Command |Purpose
+
+|`web`
+|`bundle exec puma --config ./config/puma.rb`
+|HTTP server (Puma). Receives device requests and serves the UI.
+
+|`worker`
+|`bundle exec sidekiq -r ./config/sidekiq.rb`
+|Background jobs — image generation, scheduled syncs, extension fetches.
+
+|`migrate`
+|`bundle exec hanami db migrate`
+|One-off cron service. Runs database migrations on each deploy.
+
+|`assets`
+|`bundle exec hanami assets compile`
+|One-off cron service. Compiles front-end assets on each deploy.
+
+|`Postgres`
+|_(managed)_
+|PostgreSQL 16 database.
+
+|`Redis`
+|_(managed)_
+|Redis 7 key-value store (Sidekiq queue + cache).
+|===
+
+NOTE: Assets are compiled into the Docker image at build time (see `Dockerfile`). The `assets` service exists as a safety net and can be removed if you are confident your build is always producing fresh assets.
+
+== Requirements
+
+* A {railway_link} account with a project created.
+* The {railway_cli_link} installed and authenticated (`railway login`).
+* Your repository forked from `usetrmnl/terminus` (or this branch deployed directly).
+
+== Setup
+
+=== 1. Create the project services
+
+In your Railway project, create the following services:
+
+. **Postgres** — add the Railway-managed PostgreSQL plugin. Note the `DATABASE_URL` reference variable it provides.
+. **Redis** — add the Railway-managed Redis plugin. Note the `KEYVALUE_URL` (or `REDIS_URL`) reference variable it provides.
+. **web** — GitHub source, point at this repo/branch, no custom start command (uses `CMD` from `Dockerfile`).
+. **worker** — same GitHub source/branch, start command: `bundle exec sidekiq -r ./config/sidekiq.rb`.
+. **migrate** — same GitHub source/branch, start command: `bundle exec hanami db migrate`, cron schedule: `0 0 * * *` (or trigger manually on each deploy).
+. **assets** — same GitHub source/branch, start command: `bundle exec hanami assets compile`, same cron or manual trigger.
+
+=== 2. Generate a secret
+
+[source,bash]
+----
+openssl rand -hex 40
+----
+
+Keep this value — you will set it as `APP_SECRET` below.
+
+=== 3. Set environment variables
+
+Set the following variables on **each** of the four app services (`web`, `worker`, `migrate`, `assets`) unless noted otherwise.
+
+[cols="1,2,2"]
+|===
+|Variable |Value |Notes
+
+|`DATABASE_URL`
+|`${{Postgres.DATABASE_URL}}`
+|Railway reference variable from the Postgres plugin.
+
+|`KEYVALUE_URL`
+|`${{Redis.REDIS_URL}}`
+|Railway reference variable from the Redis plugin.
+
+|`API_URI`
+|`https://<your-web-domain>`
+|The public URL Railway assigns to the `web` service. Set this after the first deploy once you have a domain. Devices use this to connect.
+
+|`APP_SECRET`
+|_(your generated value)_
+|80-character hex string from `openssl rand -hex 40`.
+
+|`HANAMI_ENV`
+|`production`
+|
+
+|`HANAMI_PORT`
+|`2300`
+|
+
+|`PORT`
+|`2300`
+|Required by Railway's port detection. **`web` only.**
+
+|`RACK_ATTACK_ALLOWED_SUBNETS`
+|`100.64.0.0/10`
+|Allows Railway's internal proxy (CGNAT range) to bypass rate limiting. **`web` and `worker` only.**
+|===
+
+=== 4. Add a persistent volume to `web`
+
+Terminus stores uploaded images and generated content under `/app/public/uploads`. Mount a {railway_volumes_link}[Railway Volume] at that path on the `web` service:
+
+. In the `web` service settings, go to *Volumes*.
+. Add a volume, mount path: `/app/public/uploads`.
+
+The entrypoint script automatically `chown`s the volume to the `app` user on each start, so no manual permission fix is needed.
+
+=== 5. Configure the GitHub source branch
+
+In each app service's *Settings → Source*, set the branch to `railway`. This branch contains Railway-specific Dockerfile patches on top of upstream.
+
+=== 6. Deploy
+
+Trigger a deploy for all four services. On first deploy:
+
+. `migrate` runs `hanami db migrate` — creates all tables.
+. `assets` runs `hanami assets compile` — bakes assets (also done at build time).
+. `web` starts Puma.
+. `worker` starts Sidekiq.
+
+After `web` is running, copy the generated Railway domain and update `API_URI` on all services, then redeploy.
+
+== Environment Variables Reference
+
+Full reference of all variables used by Terminus on Railway:
+
+[cols="1,1,3"]
+|===
+|Variable |Required |Description
+
+|`DATABASE_URL`
+|Yes
+|PostgreSQL connection string. Example: `postgres://user:pass@host:5432/terminus`.
+
+|`KEYVALUE_URL`
+|Yes
+|Redis connection string. Example: `redis://host:6379/0`.
+
+|`API_URI`
+|Yes
+|Full public URL of the `web` service. Used by devices to reach the server. Example: `https://terminus.up.railway.app`.
+
+|`APP_SECRET`
+|Yes
+|Secret key for session encryption. Generate with `openssl rand -hex 40`.
+
+|`HANAMI_ENV`
+|Yes
+|Must be `production`.
+
+|`HANAMI_PORT`
+|Yes
+|Port Puma listens on. Set to `2300`.
+
+|`PORT`
+|Yes (web only)
+|Railway uses this for health checks and routing. Set to `2300`.
+
+|`RACK_ATTACK_ALLOWED_SUBNETS`
+|Recommended
+|CIDR range(s) exempt from Rack Attack rate limiting. Set to `100.64.0.0/10` to allow Railway's internal proxy. Without this, Railway's health checks and proxied requests may be rate-limited.
+
+|`TZ`
+|No
+|Timezone for the container. Example: `America/New_York`. Defaults to UTC.
+|===
+
+== Internal Networking
+
+Services communicate over Railway's {railway_private_networking_link} using `.railway.internal` hostnames. The managed plugins expose these automatically — for example:
+
+* Postgres: `Postgres.railway.internal:5432`
+* Redis: `Redis.railway.internal:6379`
+
+Use the Railway reference variables (`${{Postgres.DATABASE_URL}}`, `${{Redis.REDIS_URL}}`) rather than hardcoding these; Railway resolves them at deploy time.
+
+== Dockerfile Notes
+
+This `railway` branch carries patches on top of upstream that are required for Railway compatibility:
+
+* **`BUNDLE_JOBS=1`** in the build stage — prevents a race condition where `llhttp-ffi`'s native extension builds before `ffi` is fully installed.
+* **Assets compiled at build time** — `hanami assets compile` runs during `docker build` with dummy env vars. This avoids a multi-minute compile on every container start.
+* **`USER` instruction removed** — the container starts as root so the entrypoint can `chown` the Railway-mounted volume before dropping to `app` (UID 1000) via `setpriv`.
+
+The entrypoint (`scripts/docker/entrypoint`) handles the privilege drop:
+
+[source,ruby]
+----
+# Fix volume permissions (volume is mounted as root by Railway at runtime)
+["/app/public/uploads", "/app/public/uploads/cache", "/app/log", "/app/tmp"].each do |dir|
+  Dir.mkdir(dir) unless Dir.exist?(dir)
+  system("chown", "-R", "app:app", dir) if Process.uid == 0
+end
+
+# Drop to app user before exec
+exec("setpriv", "--reuid=1000", "--regid=1000", "--clear-groups", "--", *ARGV)
+----
+
+== Troubleshooting
+
+=== `Permission denied @ dir_s_mkdir - /app/public/uploads/cache`
+
+Railway mounts volumes as root at runtime, after the image's `chown` has already run. The entrypoint fixes this by running as root and re-chowning the mount point before dropping privileges. If you see this error, verify:
+
+* The `railway` branch is deployed (not `main`).
+* The volume is mounted at `/app/public/uploads` (not a subdirectory).
+
+=== `502 Bad Gateway` on first deploy
+
+Puma may not have started yet, or `API_URI` is still pointing at a placeholder. Check the `web` service logs via the Railway dashboard or:
+
+[source,bash]
+----
+railway logs --service web
+----
+
+=== Rate limiting / `429` responses
+
+Ensure `RACK_ATTACK_ALLOWED_SUBNETS=100.64.0.0/10` is set on the `web` service. Railway proxies all requests through its internal CGNAT range (`100.64.0.0/10`); without this, Rack Attack treats Railway's own health checks as external traffic.
+
+=== Migrations not running
+
+The `migrate` service is configured as a cron job. To run migrations immediately after a code change, trigger a manual deploy of the `migrate` service from the Railway dashboard, or redeploy it via the CLI:
+
+[source,bash]
+----
+railway redeploy --service migrate --yes
+----
+
+=== `APP_SECRET` session errors after redeploy
+
+All services must share the same `APP_SECRET`. If you regenerate it, update the variable on every service (`web`, `worker`, `migrate`, `assets`) and redeploy all of them.

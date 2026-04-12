@@ -241,6 +241,10 @@ See {raspberry_pi_link} documentation for details.
 
 See link:doc/kubernetes.adoc[Kubernetes] documentation for details.
 
+=== Railway
+
+See link:doc/railway.adoc[Railway] documentation for details.
+
 === Render
 
 See link:doc/render.adoc[Render] documentation for details.
