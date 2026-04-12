@@ -295,7 +295,6 @@ GEM
       bigdecimal
       strscan (>= 3.1.1)
     llhttp-ffi (0.5.1)
-      ffi (>= 1.15.5)
       ffi-compiler (~> 1.0)
       rake (~> 13.0)
     localhost (1.7.0)
