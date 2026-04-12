@@ -6,6 +6,24 @@ $VERBOSE = true
 jemalloc_path = Dir["/usr/lib/*/libjemalloc.so.2"]
 ENV["LD_PRELOAD"] = jemalloc_path.first unless ENV.key?("LD_PRELOAD") || jemalloc_path.empty?
 
+# Fix volume mount permissions. Railway mounts volumes as root at runtime,
+# overriding any chown done during the image build. This entrypoint runs as
+# root so we can ensure the upload dirs are writable by the app user (uid 1000).
+[
+  "/app/public/uploads",
+  "/app/public/uploads/cache",
+  "/app/log",
+  "/app/tmp"
+].each do |dir|
+  unless Dir.exist?(dir)
+    Dir.mkdir(dir)
+  end
+  # Only chown if we are root; on local dev we may already run as the app user
+  if Process.uid == 0
+    system("chown", "-R", "app:app", dir)
+  end
+end
+
 if ENV["APP_SETUP"] == "true"
   system "bundle exec hanami assets compile"
   system "bundle exec hanami db migrate"
@@ -13,4 +31,10 @@ else
   puts "Application is setup. Skipped."
 end
 
-exec(*ARGV)
+# Drop privileges to the app user (uid/gid 1000) before exec'ing the command.
+# setpriv is part of util-linux which is present in the ruby:slim base image.
+if Process.uid == 0
+  exec("setpriv", "--reuid=1000", "--regid=1000", "--clear-groups", "--", *ARGV)
+else
+  exec(*ARGV)
+end

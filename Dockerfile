@@ -105,8 +105,6 @@ RUN groupadd --system --gid 1000 app && \
     useradd app --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
     chown -R app:app . log public tmp
 
-USER 1000:1000
-
 ENTRYPOINT ["scripts/docker/entrypoint"]
 
 EXPOSE 2300
