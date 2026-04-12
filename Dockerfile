@@ -48,6 +48,8 @@ STEPS
 
 FROM base AS build
 
+ENV BUNDLE_JOBS=1
+
 RUN <<STEPS
   apt-get update -qq \
   && apt-get install --no-install-recommends -y build-essential \
