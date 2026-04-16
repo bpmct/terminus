@@ -1,4 +1,17 @@
 <fieldset class="column">
+  <%= scope(:form_field, key: :featured, errors:).render do %>
+    <label class="key" for="screen_featured">Featured</label>
+
+    <%= tag.input id: :screen_featured,
+                  name: "screen[featured]",
+                  type: :checkbox,
+                  value: "true",
+                  checked: field_for(:featured, fields, screen),
+                  class: :value %>
+
+    <span class="bit-hint">Mark as featured to expose this screen via <code>GET /api/featured-screens</code> for Showcase Mode.</span>
+  <% end %>
+
   <%= scope(:form_field, key: :label, errors:).render do %>
     <label class="key" for="screen_label">Label</label>
 

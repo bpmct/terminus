@@ -15,6 +15,7 @@ module Terminus
             required(:label).filled :string
             required(:name).filled :string
             optional(:image).filled :hash
+            optional(:featured).maybe(:bool)
           end
         end
 
@@ -38,6 +39,9 @@ module Terminus
           id = record.id
           attributes = parameters[:screen]
           image = attributes.delete :image
+
+          # HTML checkboxes are absent from params when unchecked; coerce to bool
+          attributes = attributes.merge(featured: attributes.key?(:featured))
 
           repository.update id, **attributes
           attach record, image
