@@ -51,6 +51,8 @@ module Terminus
       patch "/screens/:id", to: "api.screens.patch", as: :screen_patch
       delete "/screens/:id", to: "api.screens.delete", as: :screen_delete
 
+      get "/featured-screens", to: "api.featured_screens.index", as: :featured_screens
+
       resource :setup, to: "api.setup", only: :show
     end
     # rubocop:enable Metrics/BlockLength

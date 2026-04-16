@@ -46,6 +46,27 @@ module Terminus
                          .to_a
       end
 
+      def featured_with_devices(device_repo:, api_url: nil)
+        featured_screens = screen.where(featured: true)
+                                 .combine(:model)
+                                 .order { updated_at.desc }
+                                 .to_a
+
+        featured_screens.map do |s|
+          dev = device_repo.find_by(model_id: s.model_id)
+
+          {
+            id: s.id,
+            label: s.label,
+            name: s.name,
+            image_uri: (s.image_uri if s.respond_to?(:image_id) && s.image_id),
+            device_mac: dev&.mac_address,
+            device_api_key: dev&.api_key,
+            api_url: api_url
+          }
+        end
+      end
+
       private
 
       def with_associations = screen.combine :model

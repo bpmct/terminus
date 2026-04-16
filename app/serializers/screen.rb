@@ -5,7 +5,7 @@ module Terminus
   module Serializers
     # A screen serializer for specific keys.
     class Screen
-      KEYS = %i[id model_id label name created_at updated_at].freeze
+      KEYS = %i[id model_id label name featured created_at updated_at].freeze
 
       def initialize record, keys: KEYS, transformer: Transformers::Time
         @record = record
